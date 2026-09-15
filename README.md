@@ -27,13 +27,21 @@ Der Auflöser für die Wiedergabe-URL ist bewusst ein eigenes Modul, weil die Pl
 
 ## OpenSpec benutzen
 
-Die Planung liegt als OpenSpec-Change vor. Das Projekt bringt die Agent-Skills in `.agents/skills/` mit. Das CLI ist nicht systemweit installiert; lokal aufrufbar ist es über:
+Die Planung liegt als OpenSpec-Change vor. Das Projekt bringt die Agent-Skills in `.agents/skills/` mit und ruft das CLI über den Wrapper `./opsx` auf. Das CLI liegt in `.tools/` (nicht versioniert), weil ein systemweiter `npm install -g` auf dieser Maschine an fehlenden Rechten scheitert.
 
 ```bash
-cd /tmp/osi && ./node_modules/.bin/openspec status --change add-animex-streaming-library
+./opsx status --change add-animex-streaming-library
+./opsx show add-animex-streaming-library
+./opsx validate add-animex-streaming-library --strict
 ```
 
-Dauerhaft installieren: `npm install -g @fission-ai/openspec@latest` (Desktop-Paket `openspec` auf npm ist ein leeres Platzhalterpaket).
+Fehlt `.tools/`, einmalig nachinstallieren:
+
+```bash
+npm install --prefix .tools @fission-ai/openspec@latest
+```
+
+Das npm-Paket `openspec` ist ein leerer Platzhalter, das echte Paket heißt `@fission-ai/openspec`.
 
 ## Rechtliches und Verbreitung
 

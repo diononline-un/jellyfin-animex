@@ -29,7 +29,7 @@ Jellyfin-Plugin, das Animes aus der animex.one-Infrastruktur als Bibliothek ohne
 
 - Entwicklungsmaschine hat kein .NET SDK und keinen Zugang zum NAS. Bauen braucht einen Container mit SDK 8, Verifikation läuft auf dem NAS durch den Betreiber.
 - Jellyfin-Version auf dem NAS ist unbekannt und bestimmt die TargetAbi. Vor dem ersten Build feststellen.
-- OpenSpec-CLI nicht systemweit installiert. Aufruf über `/tmp/osi/node_modules/.bin/openspec`, Paket `@fission-ai/openspec` (das npm-Paket `openspec` ist ein leerer Platzhalter).
+- OpenSpec-CLI nicht systemweit installiert (`npm install -g` scheitert an Rechten außerhalb des Workspace). Immer den Wrapper `./opsx` benutzen, CLI liegt in `.tools/` (gitignored). Paket: `@fission-ai/openspec`; das npm-Paket `openspec` ist ein leerer Platzhalter.
 
 ## Doku-Pflichten
 

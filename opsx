@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# OpenSpec-CLI des Projekts. Kein systemweiter Aufruf nötig.
+#
+#   ./opsx status --change add-animex-streaming-library
+#   ./opsx validate add-animex-streaming-library --strict
+#   ./opsx list
+set -euo pipefail
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+bin="$here/.tools/node_modules/.bin/openspec"
+if [ ! -x "$bin" ]; then
+  echo "OpenSpec-CLI fehlt. Einmalig installieren:" >&2
+  echo "  cd \"$here\" && npm install --prefix .tools @fission-ai/openspec@latest" >&2
+  exit 1
+fi
+export OPENSPEC_TELEMETRY=0
+exec "$bin" "$@"

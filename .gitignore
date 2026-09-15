@@ -7,3 +7,4 @@ TestResults/
 publish/
 package/
 artifacts/
+.tools/
