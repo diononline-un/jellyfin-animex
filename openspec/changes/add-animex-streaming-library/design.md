@@ -5,7 +5,7 @@ Gründe und Umfang stehen in `proposal.md`, die geprüften Live-Befunde in `docs
 1. Jellyfin behandelt `.strm`-Dateien als native Medien-Quelle. Der Inhalt ist eine URL, das Item verhält sich danach wie jede andere Folge.
 2. Das animex-GraphQL-Schema enthält nur 17 Typen und keine Episoden- oder Quellenobjekte. Katalog und Metadaten sind stabil beziehbar, Episodenlisten und Stream-URLs nicht.
 3. Die Serienseite `https://animex.one/anime/{id}` ist serverseitig gerendert und enthält JSON-LD sowie Episodenverweise im Muster `/watch/{slug}-{animexId}-episode-{n}`.
-4. Die Entwicklungsmaschine hat kein .NET-SDK und keinen Zugriff auf den Zielserver. Bauen und Verifizieren brauchen einen Container oder Zugang.
+4. Die Entwicklungsmaschine hat kein .NET-SDK und keinen Zugriff auf den Zielserver. Bauen und Verifizieren brauchen einen Container oder Zugang. Zielinstanz ist Jellyfin 10.11.5 auf einem NAS, privater Betrieb.
 
 ## Goals / Non-Goals
 
@@ -71,9 +71,11 @@ Alternative wäre, die Fassung als Untertitelspur zu behandeln. Das geht nicht, 
 
 Kein Fortschritts-Sharing zwischen Fassungen, kein automatischer Wechsel. Jellyfin führt den Status je Item; alles andere wäre eigener Zustand.
 
-### D9: Zielplattform Jellyfin 10.10 oder neuer, Zielbild erst nach Messung
+### D9: Zielplattform Jellyfin 10.11.5 mit TargetAbi 10.11.0.0 und Zielframework net9.0
 
-Das Plugin wird gegen die Plugin-API von Jellyfin 10.10 gebaut und mit einer TargetAbi ausgeliefert, die zur installierten Version auf dem NAS passt. Die genaue Version ist noch nicht bekannt und wird vor dem ersten Build festgestellt; sie bestimmt nur die TargetAbi, nicht die Architektur.
+Bestätigt: die Zielinstanz läuft auf Jellyfin 10.11.5. Daraus folgen `TargetAbi` `10.11.0.0`, Zielframework `net9.0` und die Paketverweise `Jellyfin.Controller` sowie `Jellyfin.Model` in Version 10.11.5 (mit `ExcludeAssets=runtime`, weil die Laufzeitumgebung die Instanz liefert). .NET 9 ist damit die Bauvoraussetzung, nicht .NET 8.
+
+Der Bau erfolgt gegen genau diese Fassung. Die offizielle Plugin-Vorlage und FastSTRM 3.0.0 führen dieselbe Kombination (`net9.0`, `10.11.0.0`), der Weg ist also belegt.
 
 ### D10: Entwicklungs- und Bauumgebung getrennt von der Zielumgebung
 
@@ -103,7 +105,7 @@ Rückbau: Plugin deinstallieren, Bibliotheksordner löschen, Bibliothek aus Jell
 
 ## Open Questions
 
-- Genaue Jellyfin-Version auf dem NAS und damit die TargetAbi: wird vor dem Build festgestellt, ändert die Architektur nicht.
 - Ob die Auflösung ohne Kopflosen Browser für alle Titel gelingt oder nur für einen Teil: wird beim ersten Praxistest gemessen und im Bericht festgehalten.
 - Ob FastSTRM als zweiter Schritt nötig ist oder die begrenzte Nebenläufigkeit genügt: abhängig von gemessenen Startzeiten.
 - Wie stark die Untertitelspuren in der Praxis abweichen: nach dem ersten Praxistest zu beurteilen.
+- Ob die Zielinstanz die Player-Domains überhaupt erreicht: vor der Implementierung geprüft; bei Blockade ist der Change gestoppt.

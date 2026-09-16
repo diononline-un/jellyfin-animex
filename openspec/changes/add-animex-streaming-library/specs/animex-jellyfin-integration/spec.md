@@ -76,3 +76,21 @@ Das Plugin SHALL über die Plugin-Seite konfigurierbar sein: Bibliothekspfad, Fa
 - **GIVEN** ein Lauf, bei dem die Auflösung für einen Titel fehlschlägt
 - **WHEN** das Protokoll eingesehen wird
 - **THEN** enthält der Eintrag den Titel, die Episodennummer und den Fehlergrund
+
+### Requirement: Passende Zielplattform
+
+Das Plugin SHALL für Jellyfin 10.11.5 gebaut werden, mit `TargetAbi` `10.11.0.0` und Zielframework `net9.0`. Es SHALL auf der Zielinstanz ohne Plattformwarnung geladen werden.
+
+#### Scenario: Plugin lädt auf der Zielinstanz
+
+- **GIVEN** Jellyfin 10.11.5 auf dem NAS und die gebaute Plugin-Datei
+- **WHEN** die Instanz neu gestartet und die Plugin-Seite geöffnet wird
+- **THEN** erscheint das Plugin in der Liste
+- **AND** beim Start meldet die Instanz keine Plattform- oder Versorgungswarnung für dieses Plugin
+
+#### Scenario: Instanz mit abweichender Fassung
+
+- **GIVEN** eine Jellyfin-Instanz mit älterer Nebenversion als die Zielplattform
+- **WHEN** das Plugin installiert wird
+- **THEN** verweigert die Instanz das Laden wegen der `TargetAbi`
+- **AND** die Bibliothek bleibt unverändert

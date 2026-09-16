@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-09-16 — Zielplattform fixiert: Jellyfin 10.11.5
+
+- Zielinstanz bestätigt: Jellyfin 10.11.5 auf dem NAS, Betrieb ausschließlich privat. Damit entfallen die offenen Punkte zur Version.
+- Build-Ziel festgelegt: `TargetAbi` 10.11.0.0, Zielframework `net9.0`, Pakete `Jellyfin.Controller` und `Jellyfin.Model` in 10.11.5 mit `ExcludeAssets=runtime` (Beleg: Plugin-Vorlage und FastSTRM 3.0.0 fahren dieselbe Kombination). Bauvoraussetzung ist damit .NET SDK 9, nicht 8.
+- Neue Anforderung R20 und neue Spec-Anforderung „Passende Zielplattform" mit zwei Szenarien ergänzt; `docs/feasibility.md` um den Abschnitt „Zielinstanz" erweitert.
+- Aufgaben 1.1 und 1.5 in `tasks.md` als erledigt markiert, 1.2 auf SDK 9 korrigiert.
+- Nachtrag: globaler Regelsatz in `~/.dsh/AGENTS.md` enthält jetzt den Abschnitt „OpenSpec in jedem neuen Projekt" (repo-lokale Installation in `.tools/`, Wrapper `opsx`, `validate --strict`).
+
 ## 2026-09-16 — Machbarkeit belegt, PRD und OpenSpec-Change angelegt
 
 - Live geprüft: animex.one ist eine SvelteKit-App mit öffentlichem GraphQL-Backend (`graphql.animex.one`), offener Introspection und leerem `Disallow` in der robots.txt.

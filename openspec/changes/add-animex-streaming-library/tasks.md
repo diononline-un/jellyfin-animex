@@ -1,10 +1,10 @@
 ## 1. Voraussetzungen und Zugänge
 
-- [ ] 1.1 Jellyfin-Version auf dem NAS feststellen (Dashboard, Info) und notieren; Ergebnis in `docs/feasibility.md` unter „Offene Prüfungen" eintragen. Verifikation: Version und TargetAbi stehen im Dokument.
-- [ ] 1.2 .NET SDK 8 auf der Entwicklungsmaschine bereitstellen (nativ oder Container) und mit `dotnet --list-sdks` belegen. Verifikation: Kommandoausgabe zeigt SDK 8.
+- [x] 1.1 Jellyfin-Version auf dem NAS feststellen und notieren; erledigt am 2026-09-16: Version 10.11.5, TargetAbi 10.11.0.0, eingetragen in `docs/feasibility.md` unter „Zielinstanz".
+- [ ] 1.2 .NET SDK 9 auf der Entwicklungsmaschine bereitstellen (nativ oder Container) und mit `dotnet --list-sdks` belegen. Verifikation: Kommandoausgabe zeigt SDK 9.
 - [ ] 1.3 Erreichbarkeit der Player-Domains vom NAS aus prüfen (Statuscode und Antwortzeit für die Player-Adresse und eine Playlist). Verifikation: Messwerte stehen im Dokument; bei Blockade wird der Change gestoppt und gemeldet.
-- [ ] 1.4 Repository-Grundgerüst anlegen: Projektmappe, Plugin-Projekt, Testprojekt, `.gitignore`, `README.md`. Verifikation: `dotnet build` läuft durch und erzeugt eine Plugin-DLL.
-- [ ] 1.5 Plugin-Zielplatform festlegen (TargetAbi passend zur NAS-Version) und in der Projektdatei setzen. Verifikation: `dotnet build` ohne Plattformwarnung.
+- [ ] 1.4 Repository-Grundgerüst anlegen: Projektmappe, Plugin-Projekt, Testprojekt. Verifikation: `dotnet build` läuft durch und erzeugt eine Plugin-DLL.
+- [x] 1.5 Plugin-Zielplattform festlegen; erledigt am 2026-09-16: `TargetAbi` 10.11.0.0, Zielframework `net9.0`, Pakete `Jellyfin.Controller` und `Jellyfin.Model` in 10.11.5 mit `ExcludeAssets=runtime`.
 
 ## 2. Katalogleser und Anreicherung
 

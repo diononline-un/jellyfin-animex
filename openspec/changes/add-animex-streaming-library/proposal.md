@@ -26,7 +26,7 @@ Keine. Es handelt sich um ein neues Projekt ohne bestehende Spezifikationen.
 ## Impact
 
 - Neues Repository `jellyfin-animex`, bisher kein Code vorhanden.
-- Zielsystem: Jellyfin auf dem NAS, Version 10.10 oder neuer (noch zu bestätigen). Änderung dort beschränkt auf Plugin-Verzeichnis und eine neue Bibliothek.
+- Zielsystem: Jellyfin **10.11.5** auf einem NAS (bestätigt), `TargetAbi` `10.11.0.0`, Zielframework `net9.0`. Änderung dort beschränkt auf Plugin-Verzeichnis und eine neue Bibliothek. Betrieb ausschließlich privat im eigenen Haushalt.
 - Externe Abhängigkeiten: `graphql.animex.one` (Katalog), `graphql.anilist.co` (Metadaten), Player-Infrastruktur von animex (Wiedergabe).
-- Entwicklungsvoraussetzung: .NET SDK 8, auf der Entwicklungsmaschine derzeit nicht vorhanden; NAS-Zugang für Verifikation fehlt ebenfalls.
+- Entwicklungsvoraussetzung: .NET SDK 9, auf der Entwicklungsmaschine derzeit nicht vorhanden; NAS-Zugang für Verifikation fehlt ebenfalls.
 - Betriebsrisiko: Wartungsaufwand beim Auflöser, weil die Player-Gegenstelle keine dokumentierte API anbietet.

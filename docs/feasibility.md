@@ -43,6 +43,22 @@ Entscheidender Negativbefund: das öffentliche GraphQL-Schema enthält **keine**
 - Fernabruf-URLs werden per ffprobe geprüft. Das kostet beim ersten Scan und beim Playback-Start Zeit, deshalb existiert FastSTRM. Für den ersten Ausbau genügt es, den Scan zu drosseln; die Beschleunigung ist ein eigener, späterer Schritt.
 - Fortsetzen und Gesehen-Status hängen an der Jellyfin-Item-ID, nicht an einer Datei. Ein STRM-Eintrag verhält sich hier wie jede andere Folge.
 
+### Zielinstanz
+
+Bestätigt durch den Betreiber am 2026-09-16: Jellyfin **10.11.5** auf einem NAS, ausschließlich privater Betrieb im eigenen Haushalt.
+
+Daraus folgt für den Bau:
+
+| Punkt | Wert | Herkunft |
+|---|---|---|
+| Zielversion | 10.11.5 | Angabe des Betreibers |
+| TargetAbi | `10.11.0.0` | Versionsschema der Plugin-Verwaltung |
+| Zielframework | `net9.0` | Jellyfin 10.11 baut auf .NET 9; die offizielle Plugin-Vorlage und FastSTRM 3.0.0 führen `net9.0` |
+| Paketversionen | `Jellyfin.Controller` und `Jellyfin.Model` in 10.11.5, `ExcludeAssets=runtime` | Plugin-Vorlage des Projekts |
+| Benötigtes SDK zum Bauen | .NET SDK 9 (nicht 8) | folgt aus `net9.0` |
+
+Damit ist der letzte offene Punkt zur Version geschlossen. Zwei Aufgaben aus `tasks.md` sind damit erledigt: Version festgestellt, Zielplattform festgelegt.
+
 ## Was funktioniert
 
 | Anforderung | Bewertung | Begründung |
@@ -64,13 +80,13 @@ Entscheidender Negativbefund: das öffentliche GraphQL-Schema enthält **keine**
 3. **Startlatenz und Scan-Dauer.** ffprobe über das Netz pro Folge. Bei einer großen Bibliothek wird der erste Scan lang. Gegenmaßnahme im Design: begrenzte Parallelität, optional FastSTRM als zweiter Schritt.
 4. **Untertitel.** HLS-Untertitel sind meist WebVTT und werden vom Client gerendert. Erzwungene Untertitel und ASS-Styling sind Glückssache. Das ist ein Qualitäts-, kein Machbarkeitsthema.
 5. **Animex-IDs können sich ändern.** Deshalb speichert das Plugin die Zuordnung animex-ID zu AniList-ID in einer eigenen Datei und erzeugt bei Konflikten neue Einträge statt bestehende zu überschreiben.
-6. **Recht und Verbreitung.** Betrieb auf dem eigenen Server ist das Risiko des Betreibers. Eine Veröffentlichung als öffentlich installierbares Plugin würde ich nicht empfehlen, weil sie die Verbreitung mitübernimmt. Entscheidung: privates Repository, Plugin-Verzeichnis nicht öffentlich bewerben.
+6. **Recht und Verbreitung.** Geklärt: privater Betrieb auf dem eigenen NAS, keine Weitergabe. Damit bleibt das Risiko beim Betreiber und die Verbreitung fremder Inhalte ist kein Thema. Das Repository bleibt privat, das Plugin wird nicht öffentlich beworben. Unverändert gilt: keine Umgehung von Bezahlschranken, kein Vorhalten von Videomaterial.
 
 ## Offene Prüfungen vor der Implementierung
 
-1. Jellyfin-Version auf dem NAS (Dashboard, Info): bestimmt `TargetAbi` und damit die Plugin-API. Ziel ist 10.10 oder neuer.
-2. Erreichbarkeit der Player-Domains vom NAS heraus, mit Statuscodes und Antwortzeiten.
-3. Ein echter Auflösungsversuch für eine Folge, um zu sehen, welche URL-Form am Ende herauskommt (Playlist mit Segmenten oder Einzeldatei) und ob die Wiedergabe im Client seekbar ist.
+1. Erreichbarkeit der Player-Domains vom NAS heraus, mit Statuscodes und Antwortzeiten.
+2. Ein echter Auflösungsversuch für eine Folge, um zu sehen, welche URL-Form am Ende herauskommt (Playlist mit Segmenten oder Einzeldatei) und ob die Wiedergabe im Client seekbar ist.
+3. .NET SDK 9 auf der Entwicklungsmaschine, sonst kein Build gegen `net9.0`.
 
 ## Empfehlung
 

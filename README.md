@@ -21,8 +21,8 @@ Der Auflöser für die Wiedergabe-URL ist bewusst ein eigenes Modul, weil die Pl
 
 ## Voraussetzungen
 
-- Jellyfin 10.10 oder neuer auf dem Zielserver (genaue Version noch festzustellen, sie bestimmt die TargetAbi).
-- .NET SDK 8 zum Bauen.
+- Jellyfin 10.11.5 auf dem NAS (bestätigt), Plugin-Ziel `TargetAbi` `10.11.0.0`, Zielframework `net9.0`.
+- .NET SDK 9 zum Bauen (nicht 8: Jellyfin 10.11 baut auf .NET 9).
 - Schreibzugriff auf einen eigenen Bibliotheksordner, getrennt von bestehenden Bibliotheken.
 
 ## OpenSpec benutzen
@@ -45,4 +45,4 @@ Das npm-Paket `openspec` ist ein leerer Platzhalter, das echte Paket heißt `@fi
 
 ## Rechtliches und Verbreitung
 
-Privater Betrieb auf dem eigenen Server. Eine Veröffentlichung als allgemein installierbares Plugin ist nicht vorgesehen, weil sie die Verbreitung fremder Inhalte mitübernimmt. Das Plugin umgeht keine Bezahlschranken und speichert kein Videomaterial.
+Privater Betrieb auf dem eigenen NAS im eigenen Haushalt, keine Weitergabe. Das Repository bleibt privat, das Plugin wird nicht öffentlich beworben. Das Plugin umgeht keine Bezahlschranken und speichert kein Videomaterial.

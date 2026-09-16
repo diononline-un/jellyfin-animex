@@ -37,6 +37,7 @@ Ein Betreiber, ein Heimserver, wenige Benutzer im Haushalt. Kein Mehrinstanzbetr
 
 ### Bibliotheksverhalten
 
+- R20: Das Plugin SHALL gegen Jellyfin 10.11.5 gebaut werden, mit `TargetAbi` `10.11.0.0` und Zielframework `net9.0`, und SHALL auf der Zielinstanz ohne Plattformwarnung laden.
 - R12: Gesehene Folgen, Fortsetzungspositionen, Favoriten und Wiedergabezähler nutzen Jellyfins eigene Mechanismen. Das Plugin speichert keinen Wiedergabestatus.
 - R13: Die Bibliothek funktioniert auch, wenn animex nicht erreichbar ist: Anzeige, Suche und Metadaten bleiben, nur die Wiedergabe schlägt fehl.
 - R14: Ein Titel, der bei animex verschwindet, wird beim Lauf als verwaist erkannt. Vorgabe: Einträge werden nicht automatisch gelöscht, sondern im Protokoll gemeldet; Löschen ist eine bewusste Einstellung.
@@ -71,15 +72,15 @@ Ein Betreiber, ein Heimserver, wenige Benutzer im Haushalt. Kein Mehrinstanzbetr
 
 ## Annahmen
 
-- Jellyfin auf dem NAS ist Version 10.10 oder neuer. Bestätigung über Dashboard, Info.
+- Jellyfin auf dem NAS ist Version 10.11.5. Bestätigt durch den Betreiber am 2026-09-16.
 - Der Server darf die Player-Domains erreichen (kein DNS- oder Filterproblem, keine Blockade durch Cloudflare).
 - Der Betreiber hat Administratorzugriff auf Jellyfin, um Plugin und Bibliothek anzulegen.
 - Die Entwicklungsmaschine bekommt Zugang zum NAS oder der Betreiber führt Verifikationsschritte selbst aus.
 
 ## Abhängigkeiten und Umgebung
 
-- Plugin-Entwicklung: .NET SDK 8 (oder passend zur Jellyfin-Version), Jellyfin-Plugin-Vorlage.
-- Entwicklungsmaschine: kein .NET-SDK installiert, kein Zugang zum NAS, kein SSH-Zugang. Build und Verifikation brauchen diese Zugänge oder einen Container mit dem SDK.
+- Plugin-Entwicklung: .NET SDK 9 (Jellyfin 10.11 baut auf .NET 9), Pakete `Jellyfin.Controller` und `Jellyfin.Model` in Version 10.11.5, `TargetAbi` `10.11.0.0`.
+- Entwicklungsmaschine: kein .NET-SDK installiert, kein Zugang zum NAS, kein SSH-Zugang. Build und Verifikation brauchen diese Zugänge oder einen Container mit SDK 9.
 - Externe APIs: `graphql.animex.one` (Katalog), `graphql.anilist.co` (Metadaten), Player-Infrastruktur für die Wiedergabe.
 
 ## Meilensteine

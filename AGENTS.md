@@ -5,7 +5,7 @@ Jellyfin-Plugin, das Animes aus der animex.one-Infrastruktur als Bibliothek ohne
 ## Einstieg
 
 - `docs/feasibility.md` — geprüfte Live-Befunde, Risiken, offene Prüfungen. Zuerst lesen.
-- `docs/prd.md` — Anforderungen R1 bis R19, Nicht-Ziele, Erfolgskriterien, Meilensteine.
+- `docs/prd.md` — Anforderungen R1 bis R20, Nicht-Ziele, Erfolgskriterien, Meilensteine.
 - `openspec/changes/add-animex-streaming-library/` — proposal, specs, design, tasks. Die Specs sind der Verhaltensvertrag.
 
 ## Arbeitsweise
@@ -23,12 +23,12 @@ Jellyfin-Plugin, das Animes aus der animex.one-Infrastruktur als Bibliothek ohne
 - Schreibzugriffe nur im konfigurierten Bibliothekspfad. Keine bestehende Jellyfin-Bibliothek und keine Systemdatei anfassen.
 - Kein eigener Wiedergabestatus. Gesehen, Fortsetzen und Favoriten führt Jellyfin.
 - Zugangsdaten und Sitzungswerte nie protokollieren, nie committen.
-- Keine öffentliche Distribution des Plugins.
+- Keine öffentliche Distribution des Plugins. Betrieb nur privat auf dem eigenen NAS (Entscheidung des Nutzers, 2026-09-16).
 
 ## Umgebung
 
-- Entwicklungsmaschine hat kein .NET SDK und keinen Zugang zum NAS. Bauen braucht einen Container mit SDK 8, Verifikation läuft auf dem NAS durch den Betreiber.
-- Jellyfin-Version auf dem NAS ist unbekannt und bestimmt die TargetAbi. Vor dem ersten Build feststellen.
+- Zielinstanz: Jellyfin 10.11.5 auf einem NAS. Plugin-Ziel: `TargetAbi` 10.11.0.0, Zielframework `net9.0`, Pakete `Jellyfin.Controller` und `Jellyfin.Model` in 10.11.5 mit `ExcludeAssets=runtime`.
+- Entwicklungsmaschine hat kein .NET SDK und keinen Zugang zum NAS. Bauen braucht einen Container mit SDK 9, Verifikation läuft auf dem NAS durch den Betreiber.
 - OpenSpec-CLI nicht systemweit installiert (`npm install -g` scheitert an Rechten außerhalb des Workspace). Immer den Wrapper `./opsx` benutzen, CLI liegt in `.tools/` (gitignored). Paket: `@fission-ai/openspec`; das npm-Paket `openspec` ist ein leerer Platzhalter.
 
 ## Doku-Pflichten
