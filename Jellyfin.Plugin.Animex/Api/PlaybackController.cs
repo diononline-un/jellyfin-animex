@@ -205,24 +205,11 @@ public class PlaybackController : ControllerBase
 
     private async Task<AnimeEntry?> FindEntryAsync(PluginConfiguration config, string animexId, CancellationToken cancellationToken)
     {
-        // Zuerst aus dem Bestand, sonst aus dem Katalog.
-        if (Guid.TryParse(animexId, out _))
-        {
-            return null;
-        }
-
+        // Einzelabfrage über den Kennungsfilter. Vorher lief hier eine Seitenschleife über den
+        // gesamten Katalog, die bei jedem Abspielen hunderte Anfragen auslöste.
         try
         {
-            var entries = await _catalogue.FetchAsync(
-                new PluginConfiguration
-                {
-                    CatalogApiUrl = config.CatalogApiUrl,
-                    MaxTitles = 0,
-                    PageSize = 1,
-                    Genres = new List<string>()
-                },
-                cancellationToken).ConfigureAwait(false);
-            return entries.FirstOrDefault(e => string.Equals(e.AnimexId, animexId, StringComparison.OrdinalIgnoreCase));
+            return await _catalogue.FetchByIdAsync(animexId, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException or TaskCanceledException)
         {

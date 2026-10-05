@@ -50,6 +50,13 @@ public class LedgerTitle
 /// </summary>
 public class LibraryLedger
 {
+    private static readonly JsonSerializerOptions SerializerOptions = new()
+    {
+        WriteIndented = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        PropertyNameCaseInsensitive = true
+    };
+
     [JsonPropertyName("titles")]
     public List<LedgerTitle> Titles { get; set; } = new();
 
@@ -69,7 +76,7 @@ public class LibraryLedger
         try
         {
             var json = File.ReadAllText(path);
-            var ledger = JsonSerializer.Deserialize<LibraryLedger>(json) ?? new LibraryLedger();
+            var ledger = JsonSerializer.Deserialize<LibraryLedger>(json, SerializerOptions) ?? new LibraryLedger();
             ledger.Path = path;
             return ledger;
         }
@@ -86,7 +93,7 @@ public class LibraryLedger
             return;
         }
 
-        var json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
+        var json = JsonSerializer.Serialize(this, SerializerOptions);
         File.WriteAllText(Path, json);
     }
 

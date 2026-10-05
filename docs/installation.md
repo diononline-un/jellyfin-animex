@@ -134,7 +134,8 @@ Bestehende Bibliotheken, Benutzerkonten und Wiedergabestände bleiben unangetast
 
 ## Bekannte Einschränkungen
 
-- **Auflösung der Wiedergabe-URL**: Der Anbieter liefert seine Quelle über eine Einbettung mit nachgeladenem Skript. Der mitgelieferte Auflöser deckt den Fall ab, in dem die Einbettung die Playlist-Adresse direkt nennt. Gelingt das nicht, erscheint die Folge als derzeit nicht abspielbar und der Grund steht im Protokoll. In dem Fall lässt sich über einen externen Auflöser nachrüsten (Konfiguration `ExternalResolverCommand`, nicht in der Oberfläche). Die Bibliothek bleibt in jedem Fall nutzbar.
+- **Auflösung der Wiedergabe-URL, wichtigster Punkt**: Der Anbieter liefert seine Quelle über eine Einbettung mit nachgeladenem, verschleiertem Skript. Ohne Ausführung von JavaScript ist die Wiedergabe-Playlist derzeit nicht automatisch zu ermitteln (Messwerte in `docs/feasibility.md`). Folge: Die Bibliothek entsteht vollständig, Titel, Cover, Beschreibung, Suche und Episodenlisten stimmen, aber ein Abspielversuch endet mit einer Meldung. Ein externer Auflöser ist als Erweiterungspunkt vorhanden (`ExternalResolverCommand` in der Konfigurationsdatei), aber nicht über die Oberfläche. `yt-dlp` hilft hier nicht, dafür gibt es keine Extraktoren.
 - **Erster Scan dauert**: Jellyfin prüft jede Verweisadresse per ffprobe über das Netz. Bei einer großen Bibliothek ist der erste Scan langsam.
 - **Untertitel-Formatierung**: Es kommen die Spuren an, die der Anbieter liefert (WebVTT). Aufwendige Stile aus ASS-Dateien werden nicht übernommen.
 - **Nur englische Fassungen**: Andere Sprachen bietet die Gegenstelle nicht an.
+- **Anfragebegrenzung**: Die Katalog-Schnittstelle begrenzt die Anfragen. Das Plugin drosselt die Seitenabfragen auf eine Sekunde und wiederholt bei Überlastung mit Wartezeit. Bei sehr großen Läufen (mehrere tausend Titel) kann ein Lauf trotzdem länger dauern; die Titelobergrenze in der Konfiguration hilft.

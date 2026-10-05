@@ -7,4 +7,6 @@ TestResults/
 publish/
 package/
 artifacts/
+dist/
 .tools/
+.ziptool/

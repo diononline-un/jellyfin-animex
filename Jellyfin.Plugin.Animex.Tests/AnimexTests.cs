@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text.Json;
 using Jellyfin.Plugin.Animex.Catalogue;
 using Jellyfin.Plugin.Animex.Configuration;
@@ -205,6 +206,45 @@ public class CatalogueSyncTests
     }
 }
 
+public class CatalogueRetryTests
+{
+    [Fact]
+    public void Delay_uses_retry_after_from_body()
+    {
+        using var response = new HttpResponseMessage((HttpStatusCode)429);
+        const string body = """{"error":"rate_limited","message":"Too many requests.","retry_after":220}""";
+        var delay = CatalogueRetry.DelayFor(response, body, 1);
+
+        // 220 Sekunden werden auf die Obergrenze von 180 begrenzt.
+        Assert.Equal(180, delay.TotalSeconds);
+    }
+
+    [Fact]
+    public void Delay_uses_growing_wait_without_hint()
+    {
+        using var response = new HttpResponseMessage((HttpStatusCode)503);
+        var delay = CatalogueRetry.DelayFor(response, "{}", 2);
+        Assert.Equal(20, delay.TotalSeconds);
+    }
+
+    [Fact]
+    public void Delay_uses_retry_after_header()
+    {
+        using var response = new HttpResponseMessage((HttpStatusCode)429);
+        response.Headers.RetryAfter = new System.Net.Http.Headers.RetryConditionHeaderValue(TimeSpan.FromSeconds(30));
+        var delay = CatalogueRetry.DelayFor(response, "{}", 1);
+        Assert.Equal(30, delay.TotalSeconds);
+    }
+
+    [Fact]
+    public void Delay_is_never_zero()
+    {
+        using var response = new HttpResponseMessage((HttpStatusCode)429);
+        var delay = CatalogueRetry.DelayFor(response, """{"retry_after":0}""", 1);
+        Assert.True(delay.TotalSeconds >= 1);
+    }
+}
+
 public class LibraryLedgerTests
 {
     [Fact]
@@ -233,8 +273,17 @@ public class LibraryLedgerTests
             ledger.Save();
 
             var reloaded = LibraryLedger.Load(path);
-            Assert.Equal("21", Assert.Single(reloaded.Titles).AnimexId);
-            Assert.Equal("https://example.invalid/x.m3u8", Assert.Single(reloaded.Titles[0].Episodes).StreamUrl);
+            var reloadedTitle = Assert.Single(reloaded.Titles);
+            Assert.Equal("21", reloadedTitle.AnimexId);
+            Assert.Equal(21, reloadedTitle.AniListId);
+            Assert.Equal("ONE PIECE", reloadedTitle.Title);
+            Assert.Equal("ONE PIECE [21]", reloadedTitle.FolderName);
+            Assert.Equal(12, reloadedTitle.EpisodeCount);
+
+            var episode = Assert.Single(reloadedTitle.Episodes);
+            Assert.Equal(1, episode.Number);
+            Assert.Equal("sub", episode.Language);
+            Assert.Equal("https://example.invalid/x.m3u8", episode.StreamUrl);
         }
         finally
         {

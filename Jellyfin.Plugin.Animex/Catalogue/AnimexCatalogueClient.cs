@@ -49,6 +49,9 @@ public class AnimeEntry
 /// <summary>Liest den Katalog aus dem Animex-GraphQL-Backend.</summary>
 public class AnimexCatalogueClient
 {
+    /// <summary>Pause zwischen zwei Katalogseiten, gegen die Anfragebegrenzung der Gegenstelle.</summary>
+    private static readonly TimeSpan PageDelay = TimeSpan.FromSeconds(1);
+
     private const string Query = """
         query Catalogue($filter: AnimeCatalogFilterInput, $limit: Int, $offset: Int) {
           catalogAnime(filter: $filter, limit: $limit, offset: $offset) {
@@ -105,9 +108,32 @@ public class AnimexCatalogueClient
             result.AddRange(items);
             offset += items.Count;
             _logger.LogInformation("Katalog gelesen: {Count} Titel bisher", result.Count);
+
+            // Die Gegenstelle begrenzt die Anfragen. Eine kurze Pause zwischen den Seiten hält
+            // den Lauf unter dem Kontingent; die Wiederholung in PostAsync fängt den Rest ab.
+            if (items.Count == take)
+            {
+                await Task.Delay(PageDelay, cancellationToken).ConfigureAwait(false);
+            }
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Holt einen einzelnen Titel über seine Kennung. Nutzt den Filter der Gegenstelle, damit
+    /// genau eine Anfrage nötig ist. Der Wiedergabe-Endpunkt braucht das bei jedem Abspielen.
+    /// </summary>
+    public async Task<AnimeEntry?> FetchByIdAsync(string animexId, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(animexId))
+        {
+            return null;
+        }
+
+        var filter = new Dictionary<string, object?> { ["ids"] = animexId };
+        var items = await FetchPageAsync(new PluginConfiguration(), filter, 1, 0, cancellationToken).ConfigureAwait(false);
+        return items.FirstOrDefault();
     }
 
     private async Task<List<AnimeEntry>> FetchPageAsync(
@@ -123,14 +149,7 @@ public class AnimexCatalogueClient
             variables = new { filter, limit, offset }
         });
 
-        using var content = new StringContent(payload, Encoding.UTF8, "application/json");
-        using var response = await _http.PostAsync(config.CatalogApiUrl, content, cancellationToken).ConfigureAwait(false);
-        var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-        if (!response.IsSuccessStatusCode)
-        {
-            throw new HttpRequestException($"Katalogabfrage fehlgeschlagen: HTTP {(int)response.StatusCode} {Truncate(body)}");
-        }
-
+        var body = await PostAsync(config, payload, cancellationToken).ConfigureAwait(false);
         using var document = JsonDocument.Parse(body);
         if (document.RootElement.TryGetProperty("errors", out var errors) && errors.ValueKind == JsonValueKind.Array)
         {
@@ -187,6 +206,42 @@ public class AnimexCatalogueClient
         filter["subDubFilter"] = subDub;
 
         return filter;
+    }
+
+    /// <summary>
+    /// Sendet eine Katalogabfrage und wiederholt sie bei Überlastung. Die Gegenstelle antwortet
+    /// bei zu vielen Anfragen mit dem Status 429 und nennt in <c>retry_after</c> die Wartezeit in Sekunden. Ohne diese Behandlung bricht der Lauf ab, sobald das Kontingent erschöpft ist.
+    /// </summary>
+    private async Task<string> PostAsync(PluginConfiguration config, string payload, CancellationToken cancellationToken)
+    {
+        const int maxAttempts = 4;
+        for (var attempt = 1; ; attempt++)
+        {
+            using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+            using var response = await _http.PostAsync(config.CatalogApiUrl, content, cancellationToken).ConfigureAwait(false);
+            var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return body;
+            }
+
+            var status = (int)response.StatusCode;
+            var retryable = status == 429 || status >= 500;
+            if (!retryable || attempt >= maxAttempts)
+            {
+                throw new HttpRequestException($"Katalogabfrage fehlgeschlagen: HTTP {status} {Truncate(body)}");
+            }
+
+            var wait = CatalogueRetry.DelayFor(response, body, attempt);
+            _logger.LogWarning(
+                "Katalogabfrage mit HTTP {Status} beantwortet, neuer Versuch {Attempt} von {Max} in {Wait}s",
+                status,
+                attempt + 1,
+                maxAttempts,
+                (int)wait.TotalSeconds);
+            await Task.Delay(wait, cancellationToken).ConfigureAwait(false);
+        }
     }
 
     private AnimeEntry? Map(JsonElement item)
@@ -315,4 +370,35 @@ public class AnimexCatalogueClient
     }
 
     private static string Truncate(string value) => value.Length <= 300 ? value : value[..300];
+}
+
+/// <summary>Berechnet die Wartezeit vor einem erneuten Versuch.</summary>
+public static class CatalogueRetry
+{
+    public static TimeSpan DelayFor(HttpResponseMessage response, string body, int attempt)
+    {
+        var seconds = 0;
+        if (response.Headers.RetryAfter?.Delta is { } delta)
+        {
+            seconds = (int)delta.TotalSeconds;
+        }
+
+        if (seconds <= 0)
+        {
+            var match = System.Text.RegularExpressions.Regex.Match(body, "\"retry_after\"\\s*:\\s*(?<seconds>[0-9]+)");
+            if (match.Success && int.TryParse(match.Groups["seconds"].Value, out var parsed))
+            {
+                seconds = parsed;
+            }
+        }
+
+        if (seconds <= 0)
+        {
+            // Wachsende Wartezeit, falls die Gegenstelle keine Angabe macht.
+            seconds = (int)Math.Pow(2, attempt) * 5;
+        }
+
+        // Obergrenze, damit ein Lauf nicht unbegrenzt hängt.
+        return TimeSpan.FromSeconds(Math.Clamp(seconds, 1, 180));
+    }
 }
