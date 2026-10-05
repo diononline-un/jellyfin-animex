@@ -43,9 +43,9 @@
 - [ ] 6.4 Eine Folge abspielen. Verifikation: Wiedergabe läuft mindestens fünf Minuten, Untertitel zuschaltbar.
 - [ ] 6.5 Fortsetzen und Gesehen-Status prüfen. Verifikation: Wiedergabe setzt fort, Folge steht in der Historie.
 - [ ] 6.6 Zweiten Lauf ausführen. Verifikation: keine Duplikate, übersprungene Einträge im Bericht.
-- [ ] 6.7 Entscheiden, ob der Auflöser nachgezogen werden muss. Verifikation: Ergebnis in `docs/feasibility.md`, bei Bedarf externer Auflöser eingerichtet.
+- [x] 6.7 Entscheiden, ob der Auflöser nachgezogen werden muss; erledigt 2026-10-05: ja, sonst ist keine Wiedergabe möglich. Messwerte und Grund stehen in `docs/feasibility.md`.
 
 ## 7. Abschluss
 
-- [ ] 7.1 Ergebnisse der NAS-Prüfung in `docs/feasibility.md` und `docs/installation.md` nachtragen. Verifikation: Messwerte und bekannte Einschränkungen stehen dort.
-- [ ] 7.2 `PROJECT_STATUS.md` auf `done` setzen, Fortschritt 100. Verifikation: Frontmatter stimmt.
+- [x] 7.1 Ergebnisse in `docs/feasibility.md` und `docs/installation.md` nachgetragen; erledigt 2026-10-05: Abschnitte „Nachbau in C#: gemessener Stand" und „Lokale Ende-zu-Ende-Prüfung" mit Messwerten, bekannte Einschränkungen in der Anleitung.
+- [ ] 7.2 `PROJECT_STATUS.md` auf `done` setzen, Fortschritt 100. Verifikation: Frontmatter stimmt. Offen bis zur Wiedergabe auf dem NAS.
