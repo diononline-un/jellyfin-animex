@@ -7,10 +7,13 @@
 - Anreicherung über AniList, Verknüpfung per `anilistId`, mit Rückfall auf die Animex-Felder.
 - Bibliotheksschreiber: je Folge `.strm` plus `.nfo`, je Titel `tvshow.nfo` mit Cover, Beschreibung, Genres, Studios und Bewertung. Die Bestandsdatei `.animex-ledger.json` macht Läufe wiederaufsetzbar, verhindert Duplikate und erkennt verwaiste Titel.
 - Wiedergabe-Endpunkt `/Animex/Playback/{id}/{folge}`: In der Verweisdatei steht die Plugin-Adresse, nicht die Anbieteradresse. Beim Abspielen wird neu aufgelöst, dadurch bleiben die Einträge gültig. Zusätzlich `/Animex/Proxy` als Weiterleitung für Playlist- und Segmentadressen, begrenzt auf eine feste Liste erlaubter Wirte.
-- Auflöser live vermessen: `GET https://plyr.animex.one/api/anmx/{anilistId}/{folge}` liefert die Folgenkennung; die Wiedergabe-Playlist liegt danach hinter einer Einbettung mit nachgeladenem Skript. Der mitgelieferte Auflöser deckt den direkten Fall ab und meldet sonst „nicht auflösbar"; ein externer Auflöser ist als Erweiterungspunkt vorhanden.
-- 23 Einheitentests, alle grün: Adressbildung, Auswertung der Gegenstellen-Antwort, Dateinamen nach Jellyfin-Konvention, Fassungslogik, Bestandsdatei.
-- Neue Anleitung `docs/installation.md`: Installation auf dem NAS, eigener Bibliotheksordner, getrennte Bibliothek, Konfiguration, Prüfschritte, Rückbau.
-- Offen: Installation und Wiedergabetest auf dem NAS. Dabei entscheidet sich, ob der Auflöser nachgezogen werden muss.
+- Auflöser live vermessen: `GET https://plyr.animex.one/api/anmx/{anilistId}/{folge}` liefert die Folgenkennung. Die Wiedergabe-Playlist liegt danach hinter einer Einbettung mit nachgeladenem, verschleiertem Skript und ist ohne Ausführung von JavaScript nicht erreichbar. Der mitgelieferte Auflöser meldet das als „nicht auflösbar" mit Begründung; ein externer Auflöser ist als Erweiterungspunkt vorhanden.
+- Zwei Fehler bei der Prüfung gegen eine eigene Jellyfin-Instanz 10.11.5 gefunden und behoben: Der Wiedergabe-Endpunkt las den Katalog seitenweise (hunderte Anfragen je Abspielen, dazu HTTP 429 der Gegenstelle), jetzt Einzelabfrage über den Kennungsfilter. Die Bestandsdatei wurde in gemischter Schreibweise gespeichert und war beim nächsten Lauf unlesbar, jetzt einheitlich klein. Beide Fälle haben einen Test.
+- Katalogabfragen gegen die Anfragebegrenzung gehärtet: eine Sekunde Pause zwischen Seiten, Wiederholung mit der von der Gegenstelle genannten Wartezeit (HTTP 429, `retry_after`).
+- Bauweg gehärtet: `./build.sh` räumt Reste früherer Läufe auf und läuft als aufrufender Benutzer, damit keine root-Dateien entstehen. Das ZIP entsteht über `tools/zip.mjs`, weil das zip-Programm in den Containern fehlt.
+- 27 Einheitentests, alle grün: Adressbildung, Auswertung der Gegenstellen-Antwort, Dateinamen nach Jellyfin-Konvention, Fassungslogik, Bestandsdatei, Wartezeitberechnung.
+- Neue Anleitung `docs/installation.md`: Installation auf dem NAS, eigener Bibliotheksordner, getrennte Bibliothek, Konfiguration, Prüfschritte, Rückbau, bekannte Einschränkungen.
+- Offen: Auflöser für die Wiedergabe, dann Installation und Wiedergabetest auf dem NAS.
 
 ## 2026-09-16 — Zielplattform fixiert: Jellyfin 10.11.5
 
