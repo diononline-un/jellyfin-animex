@@ -8,9 +8,16 @@ Diese Anleitung führt von null bis zur laufenden Bibliothek. Zielsystem ist Jel
 - Eine neue Jellyfin-Bibliothek, die nur auf diesen Ordner zeigt und von den bestehenden Bibliotheken getrennt bleibt.
 - Kein Videomaterial, keine Änderung an bestehenden Bibliotheken oder an der Jellyfin-Konfiguration.
 
-## 1. Paket bauen
+## 1. Paket bauen oder herunterladen
 
-Auf der Entwicklungsmaschine (Docker muss laufen):
+Fertiges Paket aus dem Release des Repositories, für das NAS der kürzeste Weg:
+
+```bash
+curl -L -o Jellyfin.Plugin.Animex_0.1.0.zip \
+  https://github.com/diononline-un/jellyfin-animex/releases/download/v0.1.0/Jellyfin.Plugin.Animex_0.1.0.zip
+```
+
+Selbst bauen auf der Entwicklungsmaschine (Docker muss laufen):
 
 ```bash
 cd jellyfin-animex
