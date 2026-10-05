@@ -4,26 +4,49 @@ Jellyfin-Plugin, das Animes aus der Infrastruktur von [animex.one](https://anime
 
 ## Status
 
-Planung abgeschlossen, Implementierung nicht begonnen.
+Implementiert, gebaut, Tests laufen durch. Auf dem NAS noch nicht installiert.
 
-- Machbarkeit belegt: `docs/feasibility.md`
+- Installationsanleitung: `docs/installation.md`
+- Machbarkeit und Messwerte: `docs/feasibility.md`
 - Anforderungen: `docs/prd.md`
-- Planungsartefakte (OpenSpec): `openspec/changes/add-animex-streaming-library/`
+- Planung (OpenSpec): `openspec/changes/add-animex-streaming-library/`
 
-## Wie es funktionieren soll
+## Kurz zur Installation
 
-1. Katalog aus `graphql.animex.one` lesen, Metadaten über `graphql.anilist.co` anreichern (Verknüpfung über `anilistId`).
-2. Folgen ableiten aus `episodeCount`, `subCount`, `dubCount`.
-3. Pro Folge eine `.strm`-Datei mit der Wiedergabe-URL und eine `.nfo` mit Titel, Beschreibung, Cover und Nummer in einen eigenen Bibliotheksordner schreiben.
-4. Jellyfin scannt den Ordner und behandelt die Einträge wie eigene Medien. Gesehen-Status, Fortsetzen, Suche und Metadaten laufen über Jellyfin selbst.
+1. Paket bauen: `./build.sh` (braucht Docker), Ergebnis `dist/Jellyfin.Plugin.Animex_0.1.0.zip`.
+2. Auf dem NAS installieren: Dashboard, Plugins, Katalog, „Aus Datei installieren", ZIP wählen, Jellyfin neu starten.
+3. Eigenen Ordner für die Bibliothek anlegen, zum Beispiel `/volume1/media/animex-stream`. Getrennt von allen bestehenden Bibliotheken.
+4. Neue Bibliothek in Jellyfin anlegen, die nur auf diesen Ordner zeigt, Metadatenleser ausschließlich NFO, externe Anbieter abwählen.
+5. Plugin-Einstellungen öffnen: Bibliothekspfad eintragen, Fassung wählen, Trockenlauf zunächst an lassen, speichern.
+6. Geplante Aufgaben, Kategorie Animex, Aufgabe „Animex-Katalog abgleichen" starten. Ergebnis im Protokoll prüfen. Danach Trockenlauf abschalten und erneut starten.
+7. Bibliothek scannen lassen. Fertig.
 
-Der Auflöser für die Wiedergabe-URL ist bewusst ein eigenes Modul, weil die Player-Seite der Gegenstelle keine dokumentierte Schnittstelle anbietet. Änderungen dort wirken nur auf dieses Modul.
+Details, Prüfschritte und Rückbau: `docs/installation.md`.
+
+## Wie es funktioniert
+
+1. Katalog aus `graphql.animex.one` lesen (live geprüft: 3283 Titel, Filter greifen), Metadaten über `graphql.anilist.co` anreichern, verknüpft über `anilistId`.
+2. Folgen aus `episodeCount`, `subCount` und `dubCount` ableiten, Fassungen getrennt (sub, dub, beide).
+3. Pro Folge eine `.strm`-Datei und eine `.nfo` schreiben, dazu `tvshow.nfo` mit Cover, Beschreibung, Genres und Bewertung. Kein Videoinhalt.
+4. In der Verweisdatei steht die Adresse des Plugins (`{serverAddress}/Animex/Playback/{id}/{folge}`), nicht die Adresse des Anbieters. Beim Abspielen löst das Plugin neu auf. Dadurch bleibt der Eintrag gültig, auch wenn die ermittelte Wiedergabe-Adresse nur kurz gültig ist.
+5. Jellyfin scannt den Ordner und behandelt die Einträge wie eigene Medien. Gesehen-Status, Fortsetzen, Suche und Metadaten laufen über Jellyfin selbst.
+
+Der Auflöser ist ein eigenes Modul, weil die Gegenstelle keine dokumentierte Schnittstelle für Wiedergabe-Adressen anbietet. Ein Bruch dort wirkt nur auf dieses Modul, nicht auf Katalog oder Bibliothek.
 
 ## Voraussetzungen
 
 - Jellyfin 10.11.5 auf dem NAS (bestätigt), Plugin-Ziel `TargetAbi` `10.11.0.0`, Zielframework `net9.0`.
-- .NET SDK 9 zum Bauen (nicht 8: Jellyfin 10.11 baut auf .NET 9).
+- .NET SDK 9 zum Bauen (nicht 8: Jellyfin 10.11 baut auf .NET 9). Der Build über `./build.sh` nutzt dafür Docker.
 - Schreibzugriff auf einen eigenen Bibliotheksordner, getrennt von bestehenden Bibliotheken.
+
+## Entwicklung
+
+```bash
+./build.sh test    # 23 Einheitentests
+./build.sh         # Tests, Build, Installationspaket
+```
+
+Aufbau: `Jellyfin.Plugin.Animex/` (Plugin) und `Jellyfin.Plugin.Animex.Tests/` (Tests). Die Anbindung läuft über `Catalogue/` (Katalog und AniList), `Playback/` (Auflöser), `Library/` (Dateien und Bestand), `Sync/` (Ablauf und Task), `Api/` (Wiedergabe-Endpunkt), `Configuration/` (Einstellungen und Oberfläche).
 
 ## OpenSpec benutzen
 

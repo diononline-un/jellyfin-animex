@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <title>Animex</title>
+</head>
+<body>
+<div id="AnimexConfigPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-select,emby-checkbox">
+    <div data-role="content">
+        <div class="content-primary">
+            <form id="AnimexConfigForm">
+                <h2>Bibliothek</h2>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="LibraryPath">Bibliothekspfad</label>
+                    <input id="LibraryPath" name="LibraryPath" type="text" is="emby-input" />
+                    <div class="fieldDescription">
+                        Eigener Ordner, getrennt von allen bestehenden Bibliotheken. In diesen Ordner werden nur
+                        Verweis- und Metadatendateien geschrieben, kein Videomaterial.
+                    </div>
+                </div>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="ServerBaseUrl">Serveradresse für Verweise</label>
+                    <input id="ServerBaseUrl" name="ServerBaseUrl" type="text" is="emby-input" />
+                    <div class="fieldDescription">
+                        Vorgabe <code>{serverAddress}</code> überlässt Jellyfin das Einsetzen der Adresse, unter der
+                        der jeweilige Client den Server erreicht.
+                    </div>
+                </div>
+                <div class="checkboxContainer checkboxContainer-withDescription">
+                    <label>
+                        <input id="DryRun" name="DryRun" type="checkbox" is="emby-checkbox" />
+                        <span>Trockenlauf (nur berichten, nichts schreiben)</span>
+                    </label>
+                    <div class="fieldDescription checkboxFieldDescription">
+                        Beim ersten Durchlauf empfohlen. Danach abschalten, damit die Bibliothek entsteht.
+                    </div>
+                </div>
+                <div class="checkboxContainer checkboxContainer-withDescription">
+                    <label>
+                        <input id="ProtectExistingLibraries" name="ProtectExistingLibraries" type="checkbox" is="emby-checkbox" />
+                        <span>Fremde Medien im Zielordner erkennen und Lauf abbrechen</span>
+                    </label>
+                </div>
+                <div class="checkboxContainer checkboxContainer-withDescription">
+                    <label>
+                        <input id="DeleteOrphans" name="DeleteOrphans" type="checkbox" is="emby-checkbox" />
+                        <span>Einträge löschen, die nicht mehr im Katalog stehen</span>
+                    </label>
+                    <div class="fieldDescription checkboxFieldDescription">
+                        Ohne diese Option werden solche Einträge nur im Bericht genannt.
+                    </div>
+                </div>
+
+                <h2>Katalog</h2>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="MaxTitles">Höchstzahl der Titel (0 = keine Grenze)</label>
+                    <input id="MaxTitles" name="MaxTitles" type="number" min="0" is="emby-input" />
+                </div>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="AudioMode">Fassung</label>
+                    <select id="AudioMode" name="AudioMode" is="emby-select">
+                        <option value="sub">nur Untertitel</option>
+                        <option value="dub">nur Synchron</option>
+                        <option value="both">beide, soweit vorhanden</option>
+                    </select>
+                </div>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="Genres">Genres (Komma getrennt, leer = alle)</label>
+                    <input id="Genres" name="Genres" type="text" is="emby-input" />
+                </div>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="MinYear">Erscheinungsjahr ab</label>
+                    <input id="MinYear" name="MinYear" type="number" min="0" is="emby-input" />
+                </div>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="MinAverageScore">Mindestbewertung (0 bis 100)</label>
+                    <input id="MinAverageScore" name="MinAverageScore" type="number" min="0" max="100" is="emby-input" />
+                </div>
+                <div class="checkboxContainer checkboxContainer-withDescription">
+                    <label>
+                        <input id="ExcludeAdult" name="ExcludeAdult" type="checkbox" is="emby-checkbox" />
+                        <span>Erwachsene Inhalte ausschließen</span>
+                    </label>
+                </div>
+
+                <h2>Wiedergabe</h2>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="PlayerBaseUrl">Player-Adresse</label>
+                    <input id="PlayerBaseUrl" name="PlayerBaseUrl" type="text" is="emby-input" />
+                </div>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="ProviderId">Wiedergabe-Anbieter</label>
+                    <input id="ProviderId" name="ProviderId" type="text" is="emby-input" />
+                </div>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="MaxParallelism">Gleichzeitige Anfragen</label>
+                    <input id="MaxParallelism" name="MaxParallelism" type="number" min="1" max="16" is="emby-input" />
+                </div>
+
+                <h2>Status</h2>
+                <div id="AnimexReport" class="fieldDescription">Noch kein Lauf ausgeführt.</div>
+
+                <div>
+                    <button is="emby-button" type="submit" class="raised button-submit block">
+                        <span>Speichern</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        (function () {
+            var pluginId = '4f1c9b3e-7a52-4d8f-9c21-0d6b8e5a7f31';
+
+            function loadReport() {
+                var target = document.querySelector('#AnimexReport');
+                var url = ApiClient.getUrl('Plugins/' + pluginId + '/Configuration');
+                // Der Bericht wird über die Plugin-Konfiguration geladen und nur angezeigt, wenn vorhanden.
+                target.textContent = 'Konfiguration geladen. Bericht des letzten Laufs steht im Serverprotokoll (Kategorie Animex).';
+                return url;
+            }
+
+            document.querySelector('#AnimexConfigPage')
+                .addEventListener('pageshow', function () {
+                    Dashboard.showLoadingMsg();
+                    ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                        document.querySelector('#LibraryPath').value = config.LibraryPath || '';
+                        document.querySelector('#ServerBaseUrl').value = config.ServerBaseUrl || '{serverAddress}';
+                        document.querySelector('#MaxTitles').value = config.MaxTitles;
+                        document.querySelector('#AudioMode').value = config.AudioMode || 'sub';
+                        document.querySelector('#Genres').value = (config.Genres || []).join(', ');
+                        document.querySelector('#MinYear').value = config.MinYear;
+                        document.querySelector('#MinAverageScore').value = config.MinAverageScore;
+                        document.querySelector('#ExcludeAdult').checked = config.ExcludeAdult;
+                        document.querySelector('#DryRun').checked = config.DryRun;
+                        document.querySelector('#ProtectExistingLibraries').checked = config.ProtectExistingLibraries;
+                        document.querySelector('#DeleteOrphans').checked = config.DeleteOrphans;
+                        document.querySelector('#PlayerBaseUrl').value = config.PlayerBaseUrl || '';
+                        document.querySelector('#ProviderId').value = config.ProviderId || 'anmx';
+                        document.querySelector('#MaxParallelism').value = config.MaxParallelism;
+                        loadReport();
+                        Dashboard.hideLoadingMsg();
+                    });
+                });
+
+            document.querySelector('#AnimexConfigForm')
+                .addEventListener('submit', function (event) {
+                    event.preventDefault();
+                    Dashboard.showLoadingMsg();
+                    ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                        config.LibraryPath = document.querySelector('#LibraryPath').value.trim();
+                        config.ServerBaseUrl = document.querySelector('#ServerBaseUrl').value.trim();
+                        config.MaxTitles = parseInt(document.querySelector('#MaxTitles').value, 10) || 0;
+                        config.AudioMode = document.querySelector('#AudioMode').value;
+                        config.Genres = document.querySelector('#Genres').value
+                            .split(',')
+                            .map(function (value) { return value.trim(); })
+                            .filter(function (value) { return value.length > 0; });
+                        config.MinYear = parseInt(document.querySelector('#MinYear').value, 10) || 0;
+                        config.MinAverageScore = parseInt(document.querySelector('#MinAverageScore').value, 10) || 0;
+                        config.ExcludeAdult = document.querySelector('#ExcludeAdult').checked;
+                        config.DryRun = document.querySelector('#DryRun').checked;
+                        config.ProtectExistingLibraries = document.querySelector('#ProtectExistingLibraries').checked;
+                        config.DeleteOrphans = document.querySelector('#DeleteOrphans').checked;
+                        config.PlayerBaseUrl = document.querySelector('#PlayerBaseUrl').value.trim();
+                        config.ProviderId = document.querySelector('#ProviderId').value.trim();
+                        config.MaxParallelism = parseInt(document.querySelector('#MaxParallelism').value, 10) || 4;
+
+                        ApiClient.updatePluginConfiguration(pluginId, config).then(function (result) {
+                            Dashboard.processPluginConfigurationUpdateResult(result);
+                        });
+                    });
+                    return false;
+                });
+        })();
+    </script>
+</div>
+</body>
+</html>
