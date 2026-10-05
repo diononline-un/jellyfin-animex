@@ -33,6 +33,21 @@ Bekannte Vorbilder, die den STRM-Weg produktiv nutzen: [AniLibriaStrmPlugin](htt
 | Episoden-URL-Muster | `/watch/{slug}-{animexId}-episode-{n}`, z. B. `/watch/one-piece-21-episode-1` |
 | Player | `plyr.animex.one`, `megaplay.buzz`, getrennte SUB-/DUB-Spuren |
 | Weitere Infrastruktur | `auth.animex.one` (Login), `pp.animex.one` (`{"status":"ok"}`), `ws.animex.one` (Watch-Party), `serveproxy.com` (Stream-Proxy) |
+| Player-Auflösung live geprüft | `GET https://plyr.animex.one/api/anmx/{anilistId}/{episode}` liefert `{"episode":{"episodeId":1059592,"audioLayout":"both"}}`. Für `anilistId` 21 (ONE PIECE), Episode 1 |
+
+### Auflösung der Wiedergabe-URL (Live-Messung 2026-10-05)
+
+Gemessen mit einem Container-Browser gegen `https://plyr.animex.one/e/21/1?lang=sub&s=anmx&autoplay=0`. Ergebnis der Kette:
+
+1. Player-Seite lädt, dazu die eigenen Schnittstellen.
+2. `GET /api/anmx/{anilistId}/{episode}` antwortet mit der Episodenkennung und der Angabe, welche Tonspuren vorliegen (`audioLayout: both` = Untertitel und Synchron vorhanden).
+3. Die Quelle kommt über den Anbieter `anmx`, aufgelöst über eine Einbettung auf `acscdn.com`.
+4. Heraus kommt eine HLS-Playlist auf `s-95.bcdn2.se/.../master.txt?token=...` vom Typ `application/vnd.apple.mpegurl`, mit `access-control-allow-origin` genau auf den Player.
+5. Untertitel liegen als WebVTT daneben: `sub_en.vtt` (Englisch) und `ai_dub.vtt` (KI-Synchronisation), dazu ein Storyboard.
+6. Laufzeit der Episode in der Messung: 1475 Sekunden. Das Video-Element meldet `readyState: 4`, also vollständig abspielbar, mit drei Textspuren.
+
+Damit ist die Kette **ohne Kopflosen Browser im Betrieb** nachbaubar. Der Browser war nur zum Beobachten nötig. Zwei Randbedingungen: die Playlist trägt ein Token (zeitlich begrenzt, also nicht dauerhaft speichern, sondern bei Bedarf neu auflösen), und der Anbieter liefert `access-control-allow-origin` auf den Player, nicht auf beliebige Herkunft. Ob Jellyfin die Playlist direkt abspielt oder über den Server proxyen muss, entscheidet der Praxistest; das Plugin hält dafür einen Proxy-Pfad bereit.
+
 
 Entscheidender Negativbefund: das öffentliche GraphQL-Schema enthält **keine** Episoden- und **keine** Quellenobjekte. Es gibt nur `AnimeNode` und Verbindungs-/Filtertypen. Episodenlisten und Stream-URLs liegen also nicht in der dokumentierten API. Damit ist klar getrennt, was stabil ist (Katalog und Metadaten) und was Wartungsarbeit wird (Quellenauflösung).
 

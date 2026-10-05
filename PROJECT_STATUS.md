@@ -1,17 +1,17 @@
 ---
 project: jellyfin-animex
 status: in-development
-progress: 15
-last_updated: 2026-09-16
+progress: 70
+last_updated: 2026-10-05
 tags: [jellyfin, plugin, dotnet, anime, streaming, strm]
 ---
 
-Jellyfin-Plugin, das Animes aus der animex.one-Infrastruktur als Bibliothek ohne lokale Mediendateien bereitstellt (STRM-Verweise plus NFO-Metadaten). Privater Betrieb auf dem NAS.
+Jellyfin-Plugin, das Animes aus der animex.one-Infrastruktur als Bibliothek ohne lokale Mediendateien bereitstellt (STRM-Verweise plus NFO-Metadaten), in einem eigenen, von den bestehenden Bibliotheken getrennten Ordner.
 
-Machbarkeit belegt (`docs/feasibility.md`), PRD und OpenSpec-Change geschrieben, Implementierung nicht begonnen. Zielplattform fixiert: Jellyfin 10.11.5, `TargetAbi` 10.11.0.0, `net9.0`.
+Fassung 0.1.0 implementiert, gebaut, getestet (23 Einheitentests grün). Katalog, Metadaten, Dateierzeugung, Task und Wiedergabe-Endpunkt stehen. Auf dem NAS noch nicht installiert.
 
 Next steps:
-- .NET SDK 9 auf der Entwicklungsmaschine bereitstellen (Container genügt)
-- Erreichbarkeit der Player-Domains vom NAS prüfen
-- Praxistest Stream-Auflösung für eine Folge, Ergebnis in `docs/feasibility.md`
-- Katalogleser gegen animex-GraphQL und AniList implementieren (Meilenstein M1)
+- Paket auf das NAS bringen und Plugin installieren (`docs/installation.md`)
+- Eigenen Bibliotheksordner anlegen und als getrennte Bibliothek einbinden
+- Ersten Lauf im Trockenlauf, dann mit Schreiben, Bibliothek scannen
+- Eine Folge abspielen; greift der Auflöser nicht, externen Auflöser nachziehen
