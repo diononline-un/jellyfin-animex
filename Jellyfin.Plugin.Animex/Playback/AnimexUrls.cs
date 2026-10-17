@@ -29,6 +29,12 @@ public static partial class AnimexUrls
     public static string PlayerEpisodeApi(ResolveRequest request, int aniListId, int episodeNumber)
         => $"{Trim(request.PlayerBaseUrl)}/api/anmx/{aniListId}/{episodeNumber}";
 
+    /// <summary>Adresse der Quellen-Schnittstelle des Players.</summary>
+    public static string SourcesApiUrl(string seriesKey, int episodeNumber, string language, string providerId)
+        => "https://pp.animex.one/rest/api/sources"
+           + $"?id={Uri.EscapeDataString(seriesKey)}&epNum={episodeNumber}"
+           + $"&type={Uri.EscapeDataString(language)}&providerId={Uri.EscapeDataString(providerId)}";
+
     /// <summary>Adresse der Einbettung eines Fremdanbieters.</summary>
     public static string ProviderStreamUrl(string providerBaseUrl, string episodeId, int episodeNumber, string language)
         => $"{Trim(providerBaseUrl)}/stream/ani/{Uri.EscapeDataString(episodeId)}/{episodeNumber}/{Uri.EscapeDataString(language)}";

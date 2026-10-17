@@ -28,14 +28,13 @@ public class AnimexStreamResolver : IStreamResolver
     public async Task<ResolvedStream> ResolveAsync(ResolveRequest request, CancellationToken cancellationToken)
     {
         var playerUrl = AnimexUrls.PlayerUrl(request, null, request.EpisodeNumber);
-        var episodeId = await FetchEpisodeIdAsync(request, cancellationToken).ConfigureAwait(false);
 
-        playerUrl = AnimexUrls.PlayerUrl(request, episodeId, request.EpisodeNumber);
-
-        // Einbettung des Anbieters: liefert in der Regel eine Playlist-Adresse oder einen Verweis darauf.
-        foreach (var candidate in CandidateEmbedUrls(request, episodeId))
+        // Die Quellen-Schnittstelle des Players erwartet die Animex-Serienkennung (Slug plus ID),
+        // nicht die AniList-Kennung. Sie liefert direkt eine HLS-Adresse; ein Browser ist dafür
+        // nicht nötig. Die frühere Einbettung von megaplay.buzz ist nicht mehr erreichbar.
+        foreach (var provider in ProviderChain(request.ProviderId))
         {
-            var resolved = await TryExtractFromEmbedAsync(candidate, playerUrl, episodeId, cancellationToken).ConfigureAwait(false);
+            var resolved = await TryResolveFromSourcesApiAsync(request, provider, playerUrl, cancellationToken).ConfigureAwait(false);
             if (resolved is not null)
             {
                 return resolved;
@@ -43,79 +42,101 @@ public class AnimexStreamResolver : IStreamResolver
         }
 
         return ResolvedStream.Unresolved(
-            "Die Wiedergabe-Playlist konnte nicht ermittelt werden. Der Player liefert seine Quelle über eine "
-            + "Einbettung mit nachgeladenem Skript; dieser Schritt ist ohne eigenen Auflöser nicht reproduzierbar. "
-            + "Der Verweis auf den Player ist gespeichert, die Bibliothek bleibt nutzbar.");
+            "Die Wiedergabe-Playlist konnte nicht ermittelt werden. Die Quellen-Schnittstelle des Players "
+            + "antwortete für keinen der verfügbaren Anbieter mit einer Playlist. Der Verweis auf den Player "
+            + "ist gespeichert, die Bibliothek bleibt nutzbar.");
     }
 
-    /// <summary>Holt die Kennung der Folge beim Player.</summary>
-    public async Task<string?> FetchEpisodeIdAsync(ResolveRequest request, CancellationToken cancellationToken)
+    private static IEnumerable<string> ProviderChain(string preferred)
     {
-        var aniListId = request.AniListId;
-        if (aniListId <= 0)
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (!string.IsNullOrWhiteSpace(preferred)
+            && !string.Equals(preferred, "anmx", StringComparison.OrdinalIgnoreCase)
+            && seen.Add(preferred))
         {
-            return null;
+            yield return preferred;
         }
 
-        var url = AnimexUrls.PlayerEpisodeApi(request, aniListId, request.EpisodeNumber);
+        foreach (var provider in new[] { "nero", "yuki", "zuna" })
+        {
+            if (seen.Add(provider))
+            {
+                yield return provider;
+            }
+        }
+    }
+
+    private async Task<ResolvedStream?> TryResolveFromSourcesApiAsync(
+        ResolveRequest request,
+        string provider,
+        string playerUrl,
+        CancellationToken cancellationToken)
+    {
+        var seriesKey = string.IsNullOrWhiteSpace(request.AnimexId)
+            ? AnimexUrls.SeriesKey(request.AnimexId, request.Title)
+            : request.AnimexId;
+        var url = AnimexUrls.SourcesApiUrl(seriesKey, request.EpisodeNumber, request.Language, provider);
         try
         {
             using var response = await _http.GetAsync(url, cancellationToken).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogDebug("Player-Schnittstelle antwortete mit HTTP {Status} für {Url}", (int)response.StatusCode, url);
+                _logger.LogDebug("Quellen-Schnittstelle antwortete mit HTTP {Status} für Anbieter {Provider}", (int)response.StatusCode, provider);
                 return null;
             }
 
             var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-            return AnimexUrls.ParseEpisodeId(body);
+            using var document = System.Text.Json.JsonDocument.Parse(body);
+            if (!document.RootElement.TryGetProperty("sources", out var sources)
+                || sources.ValueKind != System.Text.Json.JsonValueKind.Array
+                || sources.GetArrayLength() == 0)
+            {
+                return null;
+            }
+
+            var source = sources[0];
+            var streamUrl = source.TryGetProperty("url", out var urlElement) ? urlElement.GetString() : null;
+            if (string.IsNullOrWhiteSpace(streamUrl))
+            {
+                return null;
+            }
+
+            var mediaType = source.TryGetProperty("type", out var typeElement) ? typeElement.GetString() : null;
+            var kind = mediaType is not null && mediaType.Contains("mpegurl", StringComparison.OrdinalIgnoreCase)
+                ? StreamKind.Hls
+                : StreamKind.File;
+
+            var result = new ResolvedStream
+            {
+                Kind = kind,
+                Url = streamUrl,
+                PlayerUrl = playerUrl,
+                Note = $"Über Anbieter {provider} ermittelt."
+            };
+
+            if (document.RootElement.TryGetProperty("tracks", out var tracks)
+                && tracks.ValueKind == System.Text.Json.JsonValueKind.Array)
+            {
+                foreach (var track in tracks.EnumerateArray())
+                {
+                    if (track.TryGetProperty("file", out var file) && file.ValueKind == System.Text.Json.JsonValueKind.String)
+                    {
+                        var value = file.GetString();
+                        if (!string.IsNullOrWhiteSpace(value))
+                        {
+                            result.SubtitleTracks.Add(value);
+                        }
+                    }
+                }
+            }
+
+            return result;
         }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
         {
-            _logger.LogWarning(ex, "Player-Schnittstelle nicht erreichbar: {Url}", url);
+            _logger.LogDebug(ex, "Quellen-Schnittstelle nicht erreichbar für Anbieter {Provider}", provider);
             return null;
         }
-    }
-
-    private static IEnumerable<string> CandidateEmbedUrls(ResolveRequest request, string? episodeId)
-    {
-        var key = string.IsNullOrWhiteSpace(episodeId) ? request.AniListId.ToString() : episodeId;
-        yield return AnimexUrls.ProviderStreamUrl("https://megaplay.buzz", key, request.EpisodeNumber, request.Language);
-    }
-
-    private async Task<ResolvedStream?> TryExtractFromEmbedAsync(
-        string embedUrl,
-        string playerUrl,
-        string? episodeId,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            using var response = await _http.GetAsync(embedUrl, cancellationToken).ConfigureAwait(false);
-            if (!response.IsSuccessStatusCode)
-            {
-                return null;
-            }
-
-            var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-            var playlist = AnimexUrls.FindPlaylistUrl(body);
-            if (playlist is not null)
-            {
-                return new ResolvedStream
-                {
-                    Kind = StreamKind.Hls,
-                    Url = playlist,
-                    EpisodeId = episodeId,
-                    PlayerUrl = playerUrl
-                };
-            }
-        }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
-        {
-            _logger.LogDebug(ex, "Einbettung nicht erreichbar: {Url}", embedUrl);
-        }
-
-        return null;
     }
 }
 

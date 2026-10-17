@@ -99,6 +99,8 @@ public class PlaybackController : ControllerBase
 
     /// <summary>Leitet Playlist- und Segmentadressen weiter, auf die erlaubten Wirte begrenzt.</summary>
     [HttpGet("Proxy")]
+    [HttpGet("Proxy/playlist.m3u8")]
+    [HttpGet("Proxy/segment.ts")]
     [AllowAnonymous]
     public async Task<IActionResult> Proxy([FromQuery] string url, CancellationToken cancellationToken)
     {
@@ -115,6 +117,8 @@ public class PlaybackController : ControllerBase
 
         var client = HttpClients.Shared;
         using var request = new HttpRequestMessage(HttpMethod.Get, target);
+        request.Headers.Referrer = new Uri("https://plyr.animex.one/");
+        request.Headers.TryAddWithoutValidation("Origin", "https://plyr.animex.one");
         using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
         if (!response.IsSuccessStatusCode)
         {
@@ -122,18 +126,26 @@ public class PlaybackController : ControllerBase
         }
 
         var contentType = response.Content.Headers.ContentType?.MediaType ?? "application/octet-stream";
-
-        // Playlists werden umgeschrieben, Segmente und alles andere unverändert weitergegeben.
-        if (contentType.Contains("mpegurl", StringComparison.OrdinalIgnoreCase)
-            || target.AbsolutePath.EndsWith(".m3u8", StringComparison.OrdinalIgnoreCase)
-            || target.AbsolutePath.EndsWith("master.txt", StringComparison.OrdinalIgnoreCase))
+        var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
+        if (Request.Path.Value?.EndsWith("/segment.ts", StringComparison.OrdinalIgnoreCase) == true)
         {
-            var text = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            contentType = "video/mp2t";
+        }
+
+        // Manche Playlists heißen .txt und werden als text/plain ausgeliefert. Deshalb am Inhalt
+        // erkennen, nicht nur am Dateinamen oder Inhaltstyp.
+        var isPlaylist = bytes.Length >= 7
+            && string.Equals(Encoding.ASCII.GetString(bytes, 0, 7), "#EXTM3U", StringComparison.Ordinal);
+
+        if (isPlaylist)
+        {
+            _logger.LogInformation("Proxy liefert Playlist für {Url}", target);
+            var text = Encoding.UTF8.GetString(bytes);
             return Content(RewritePlaylist(text, target), "application/vnd.apple.mpegurl", Encoding.UTF8);
         }
 
-        var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-        return File(stream, contentType, enableRangeProcessing: true);
+        _logger.LogDebug("Proxy liefert Binärdaten für {Url}", target);
+        return File(bytes, contentType);
     }
 
     /// <summary>Schreibt relative Verweise einer Playlist auf den eigenen Endpunkt um.</summary>
@@ -179,10 +191,23 @@ public class PlaybackController : ControllerBase
 
     private string BuildProxyUrl(Uri baseUri, string reference)
     {
+        // Manche Playlists des Anbieters bezeichnen Segmente als file:///i/... . Das ist kein
+        // lokaler Pfad, sondern ein absoluter Pfad auf demselben Wirt wie die Playlist.
+        if (reference.StartsWith("file:///", StringComparison.OrdinalIgnoreCase))
+        {
+            reference = reference["file://".Length..];
+        }
+
         var absolute = Uri.TryCreate(reference, UriKind.Absolute, out var parsed)
-            ? parsed
-            : new Uri(baseUri, reference);
-        return $"/Animex/Proxy?url={Uri.EscapeDataString(absolute.ToString())}";
+            && (parsed.Scheme == Uri.UriSchemeHttp || parsed.Scheme == Uri.UriSchemeHttps)
+                ? parsed
+                : new Uri(baseUri, reference);
+        var route = reference.Contains(".m3u8", StringComparison.OrdinalIgnoreCase)
+            || reference.Contains(".txt", StringComparison.OrdinalIgnoreCase)
+                ? "Proxy/playlist.m3u8"
+                : "Proxy/segment.ts";
+        var extension = route.EndsWith("m3u8", StringComparison.Ordinal) ? ".m3u8" : ".ts";
+        return $"/Animex/{route}?url={Uri.EscapeDataString(absolute.ToString())}&ext={extension}";
     }
 
     private static bool IsAllowedHost(Uri target)
@@ -191,7 +216,8 @@ public class PlaybackController : ControllerBase
         string[] allowedSuffixes =
         {
             ".bcdn2.se", ".anicdn.se", ".acscdn.com", ".vidcloud.se", ".animex.one",
-            ".megaplay.buzz", ".serveproxy.com", ".akamaihd.net", ".aniwatchtv.site", ".animeapps.top"
+            ".megaplay.buzz", ".serveproxy.com", ".akamaihd.net", ".aniwatchtv.site", ".animeapps.top",
+            ".nexabloom.top", ".dramahot.top", ".24stream.xyz"
         };
 
         if (target.Scheme != Uri.UriSchemeHttps)

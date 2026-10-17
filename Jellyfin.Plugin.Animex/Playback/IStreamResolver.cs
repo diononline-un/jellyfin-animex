@@ -52,7 +52,7 @@ public class ResolveRequest
     /// <summary>"sub" oder "dub".</summary>
     public string Language { get; set; } = "sub";
 
-    public string ProviderId { get; set; } = "anmx";
+    public string ProviderId { get; set; } = "nero";
 
     public string PlayerBaseUrl { get; set; } = "https://plyr.animex.one";
 
