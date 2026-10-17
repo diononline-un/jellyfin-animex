@@ -99,6 +99,8 @@ public class PlaybackController : ControllerBase
 
     /// <summary>Leitet Playlist- und Segmentadressen weiter, auf die erlaubten Wirte begrenzt.</summary>
     [HttpGet("Proxy")]
+    [HttpGet("Proxy/playlist.m3u8")]
+    [HttpGet("Proxy/segment.ts")]
     [AllowAnonymous]
     public async Task<IActionResult> Proxy([FromQuery] string url, CancellationToken cancellationToken)
     {
@@ -125,6 +127,10 @@ public class PlaybackController : ControllerBase
 
         var contentType = response.Content.Headers.ContentType?.MediaType ?? "application/octet-stream";
         var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
+        if (Request.Path.Value?.EndsWith("/segment.ts", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            contentType = "video/mp2t";
+        }
 
         // Manche Playlists heißen .txt und werden als text/plain ausgeliefert. Deshalb am Inhalt
         // erkennen, nicht nur am Dateinamen oder Inhaltstyp.
@@ -196,7 +202,12 @@ public class PlaybackController : ControllerBase
             && (parsed.Scheme == Uri.UriSchemeHttp || parsed.Scheme == Uri.UriSchemeHttps)
                 ? parsed
                 : new Uri(baseUri, reference);
-        return $"/Animex/Proxy?url={Uri.EscapeDataString(absolute.ToString())}";
+        var route = reference.Contains(".m3u8", StringComparison.OrdinalIgnoreCase)
+            || reference.Contains(".txt", StringComparison.OrdinalIgnoreCase)
+                ? "Proxy/playlist.m3u8"
+                : "Proxy/segment.ts";
+        var extension = route.EndsWith("m3u8", StringComparison.Ordinal) ? ".m3u8" : ".ts";
+        return $"/Animex/{route}?url={Uri.EscapeDataString(absolute.ToString())}&ext={extension}";
     }
 
     private static bool IsAllowedHost(Uri target)
