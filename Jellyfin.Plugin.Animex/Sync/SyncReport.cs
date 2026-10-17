@@ -16,6 +16,8 @@ public class SyncReport
 
     public int TitlesProcessed { get; set; }
 
+    public int TitlesSkipped { get; set; }
+
     public int EpisodesWritten { get; set; }
 
     public int EpisodesSkipped { get; set; }
@@ -43,7 +45,7 @@ public class SyncReport
     {
         var duration = (FinishedAt ?? DateTimeOffset.Now) - StartedAt;
         return $"Lauf {(DryRun ? "(Trockenlauf) " : string.Empty)}beendet in {duration.TotalSeconds:F0}s: "
-            + $"{CatalogueSize} Titel im Katalog, {TitlesProcessed} verarbeitet, "
+            + $"{CatalogueSize} Titel im Katalog, {TitlesProcessed} verarbeitet, {TitlesSkipped} unverändert, "
             + $"{EpisodesWritten} Folgen geschrieben, {EpisodesSkipped} übersprungen, "
             + $"{ResolveFailures} Auflösungsfehler, {OrphansFound} verwaist"
             + (OrphansDeleted > 0 ? $", {OrphansDeleted} entfernt" : string.Empty)
