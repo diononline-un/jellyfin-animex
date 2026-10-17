@@ -31,7 +31,7 @@ public class PluginConfiguration : BasePluginConfiguration
     public bool ExcludeAdult { get; set; } = true;
 
     /// <summary>Wiedergabe-Provider, Vorgabe ist der Hausanbieter von Animex.</summary>
-    public string ProviderId { get; set; } = "anmx";
+    public string ProviderId { get; set; } = "nero";
 
     /// <summary>Adresse des Players, aus der die Wiedergabe-URLs ermittelt werden.</summary>
     public string PlayerBaseUrl { get; set; } = "https://plyr.animex.one";

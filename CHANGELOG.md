@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10-17 — Wiedergabe über die Quellen-Schnittstelle reparieren
+
+- Auflöser auf die aktuelle Quellen-Schnittstelle des Players umgestellt: `pp.animex.one/rest/api/sources` liefert mit der Animex-Serienkennung (Slug plus ID) und den Anbietern `nero`, `yuki`, `zuna` direkt eine HLS-Adresse. Die bisherige Einbettung von `megaplay.buzz` antwortet nur noch mit einer Fehlerseite, ein Browser ist für die Auflösung nicht nötig.
+- Animex-Kennung wird unverändert als Serienkennung verwendet. Die alte Bildung aus Titel und ID erzeugte bei bereits vollständigen IDs einen doppelten Slug und damit „No anime found“.
+- Proxy erkennt Playlists jetzt am Inhalt (`#EXTM3U`) statt an Dateiendung oder Inhaltstyp. Varianten-Playlists des Anbieters heißen `.txt` und wurden vorher unverändert ausgeliefert.
+- Segmente in Playlists, die als `file:///i/...` bezeichnet werden, werden als absoluter Pfad auf dem Playlist-Wirt aufgelöst; `Uri` hatte sie vorher als lokale Datei interpretiert.
+- Segmente werden vollständig gepuffert. Der geteilte HttpClient komprimiert Antworten, der bisherige Streaming-Pfad lief dadurch in eine `ObjectDisposedException`.
+- Referer und Origin werden an die CDN-Anfragen gesetzt. Erlaubte Wirte um die aktuellen CDN-Domains ergänzt.
+- Live auf dem NAS geprüft: Master-Playlist, Varianten-Playlist und Segment für „Attack on Titan“ und „Death Note“ liefern HTTP 200, Segmente sind gültige MPEG-TS-Daten. 27 Einheitentests grün.
+- Offen: kein automatischer Wiedergabetest in Jellyfin selbst; Player- und CDN-Verhalten kann sich ändern. Der Anbieter `anmx` ist nicht mehr verfügbar, Vorgabe ist jetzt `nero`.
+
 ## 2026-10-05 — Erste lauffähige Fassung des Plugins (0.1.0)
 
 - Plugin für Jellyfin 10.11.5 gebaut: `TargetAbi` 10.11.0.0, Zielframework `net9.0`, Pakete `Jellyfin.Controller` und `Jellyfin.Model` in 10.11.5. Bau und Tests laufen im Container (`./build.sh`), Ergebnis ist ein Installationspaket unter `dist/`.
