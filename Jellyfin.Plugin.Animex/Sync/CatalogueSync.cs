@@ -324,7 +324,7 @@ public class CatalogueSync
             for (var number = 1; number <= episodeCount; number++)
             {
                 var known = ledgerTitle.Episodes.FirstOrDefault(e => e.Number == number && e.Language == language);
-                if (known is null || string.IsNullOrWhiteSpace(known.StreamUrl))
+                if (known is null)
                 {
                     return false;
                 }
