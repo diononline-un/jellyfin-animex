@@ -135,21 +135,28 @@ public class CatalogueSync
         var folderName = LibraryWriter.FolderNameFor(entry);
         var ledgerTitle = ledger.GetOrCreate(entry, folderName);
         var languages = LanguagesFor(config, entry);
-        var aniListMetadata = await _aniList.FetchAsync(config, entry.AniListId, cancellationToken).ConfigureAwait(false);
+        var episodeCount = EpisodesFor(config, entry, languages.Count, out var availableLanguages);
+        var languageList = availableLanguages.Count > 0 ? availableLanguages : languages;
 
         if (config.DryRun)
         {
-            var episodes = EpisodesFor(config, entry, languages.Count, out _);
-            report.EpisodesSkipped += episodes;
-            report.AddNote($"Trockenlauf: {entry.Title} [{entry.AnimexId}] mit {episodes} Folgen, Fassungen: {string.Join("/", languages)}");
+            report.EpisodesSkipped += episodeCount;
+            report.AddNote($"Trockenlauf: {entry.Title} [{entry.AnimexId}] mit {episodeCount} Folgen, Fassungen: {string.Join("/", languageList)}");
             return;
         }
 
+        // Unveränderte Titel kosten sonst für jede Folge eine AniList- und Quellenabfrage,
+        // obwohl alle Verweise bereits im Bestand und auf der Platte liegen.
+        if (IsComplete(config, entry, ledgerTitle, episodeCount, languageList, out var completeEpisodes))
+        {
+            report.TitlesSkipped++;
+            report.EpisodesSkipped += completeEpisodes;
+            return;
+        }
+
+        var aniListMetadata = await _aniList.FetchAsync(config, entry.AniListId, cancellationToken).ConfigureAwait(false);
         var folder = writer.EnsureSeriesFolder(config.LibraryPath, entry);
         writer.WriteSeriesMetadata(folder, entry, aniListMetadata);
-
-        var episodeCount = EpisodesFor(config, entry, languages.Count, out var availableLanguages);
-        var languageList = availableLanguages.Count > 0 ? availableLanguages : languages;
 
         foreach (var language in languageList)
         {
@@ -284,5 +291,47 @@ public class CatalogueSync
 
                 return count;
         }
+    }
+
+    private static bool IsComplete(
+        PluginConfiguration config,
+        AnimeEntry entry,
+        LedgerTitle ledgerTitle,
+        int episodeCount,
+        IReadOnlyList<string> languages,
+        out int episodes)
+    {
+        episodes = 0;
+        if (episodeCount <= 0 || languages.Count == 0)
+        {
+            return false;
+        }
+
+        var expected = episodeCount * languages.Count;
+        var folder = Path.Combine(config.LibraryPath, ledgerTitle.FolderName);
+        if (!Directory.Exists(folder))
+        {
+            return false;
+        }
+
+        if (Directory.GetFiles(folder, "*.strm").Length < expected)
+        {
+            return false;
+        }
+
+        foreach (var language in languages)
+        {
+            for (var number = 1; number <= episodeCount; number++)
+            {
+                var known = ledgerTitle.Episodes.FirstOrDefault(e => e.Number == number && e.Language == language);
+                if (known is null || string.IsNullOrWhiteSpace(known.StreamUrl))
+                {
+                    return false;
+                }
+            }
+        }
+
+        episodes = expected;
+        return true;
     }
 }
