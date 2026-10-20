@@ -86,14 +86,17 @@ public class PlaybackController : ControllerBase
         }
 
         // Bei einer Playlist den Inhalt holen und die Verweise auf den eigenen Endpunkt umschreiben.
-        var playlist = await FetchTextAsync(resolved.Url, cancellationToken).ConfigureAwait(false);
+        var referer = resolved.Headers.TryGetValue("Referer", out var configuredReferer)
+            ? configuredReferer
+            : "https://plyr.animex.one/";
+        var playlist = await FetchTextAsync(resolved.Url, resolved.Headers, cancellationToken).ConfigureAwait(false);
         if (playlist is null)
         {
-            return Redirect(resolved.Url);
+            return StatusCode(503, "Die Playlist der Quelle ist derzeit nicht erreichbar.");
         }
 
         var baseUri = new Uri(resolved.Url);
-        var rewritten = RewritePlaylist(playlist, baseUri);
+        var rewritten = RewritePlaylist(playlist, baseUri, referer);
         return Content(rewritten, "application/vnd.apple.mpegurl", Encoding.UTF8);
     }
 
@@ -102,7 +105,7 @@ public class PlaybackController : ControllerBase
     [HttpGet("Proxy/playlist.m3u8")]
     [HttpGet("Proxy/segment.ts")]
     [AllowAnonymous]
-    public async Task<IActionResult> Proxy([FromQuery] string url, CancellationToken cancellationToken)
+    public async Task<IActionResult> Proxy([FromQuery] string url, [FromQuery] string? referer, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(url) || !Uri.TryCreate(url, UriKind.Absolute, out var target))
         {
@@ -117,8 +120,12 @@ public class PlaybackController : ControllerBase
 
         var client = HttpClients.Shared;
         using var request = new HttpRequestMessage(HttpMethod.Get, target);
-        request.Headers.Referrer = new Uri("https://plyr.animex.one/");
-        request.Headers.TryAddWithoutValidation("Origin", "https://plyr.animex.one");
+        var effectiveReferer = Uri.TryCreate(referer, UriKind.Absolute, out var parsedReferer)
+            && (parsedReferer.Scheme == Uri.UriSchemeHttp || parsedReferer.Scheme == Uri.UriSchemeHttps)
+                ? parsedReferer
+                : new Uri("https://plyr.animex.one/");
+        request.Headers.Referrer = effectiveReferer;
+        request.Headers.TryAddWithoutValidation("Origin", effectiveReferer.GetLeftPart(UriPartial.Authority));
         using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
         if (!response.IsSuccessStatusCode)
         {
@@ -141,7 +148,7 @@ public class PlaybackController : ControllerBase
         {
             _logger.LogInformation("Proxy liefert Playlist für {Url}", target);
             var text = Encoding.UTF8.GetString(bytes);
-            return Content(RewritePlaylist(text, target), "application/vnd.apple.mpegurl", Encoding.UTF8);
+            return Content(RewritePlaylist(text, target, effectiveReferer.ToString()), "application/vnd.apple.mpegurl", Encoding.UTF8);
         }
 
         _logger.LogDebug("Proxy liefert Binärdaten für {Url}", target);
@@ -149,7 +156,7 @@ public class PlaybackController : ControllerBase
     }
 
     /// <summary>Schreibt relative Verweise einer Playlist auf den eigenen Endpunkt um.</summary>
-    private string RewritePlaylist(string playlist, Uri baseUri)
+    private string RewritePlaylist(string playlist, Uri baseUri, string? referer)
     {
         var builder = new StringBuilder(playlist.Length + 256);
         foreach (var rawLine in playlist.Split('\n'))
@@ -158,17 +165,17 @@ public class PlaybackController : ControllerBase
             if (line.Length == 0 || line.StartsWith('#'))
             {
                 // Attribute wie URI="..." innerhalb einer Zeile werden ebenfalls umgeschrieben.
-                builder.AppendLine(RewriteAttributes(line, baseUri));
+                builder.AppendLine(RewriteAttributes(line, baseUri, referer));
                 continue;
             }
 
-            builder.AppendLine(BuildProxyUrl(baseUri, line));
+            builder.AppendLine(BuildProxyUrl(baseUri, line, referer));
         }
 
         return builder.ToString();
     }
 
-    private string RewriteAttributes(string line, Uri baseUri)
+    private string RewriteAttributes(string line, Uri baseUri, string? referer)
     {
         const string marker = "URI=\"";
         var index = line.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
@@ -185,11 +192,11 @@ public class PlaybackController : ControllerBase
         }
 
         var inner = line[start..end];
-        var replaced = BuildProxyUrl(baseUri, inner);
+        var replaced = BuildProxyUrl(baseUri, inner, referer);
         return string.Concat(line.AsSpan(0, start), replaced, line.AsSpan(end));
     }
 
-    private string BuildProxyUrl(Uri baseUri, string reference)
+    private string BuildProxyUrl(Uri baseUri, string reference, string? referer)
     {
         // Manche Playlists des Anbieters bezeichnen Segmente als file:///i/... . Das ist kein
         // lokaler Pfad, sondern ein absoluter Pfad auf demselben Wirt wie die Playlist.
@@ -202,12 +209,19 @@ public class PlaybackController : ControllerBase
             && (parsed.Scheme == Uri.UriSchemeHttp || parsed.Scheme == Uri.UriSchemeHttps)
                 ? parsed
                 : new Uri(baseUri, reference);
-        var route = reference.Contains(".m3u8", StringComparison.OrdinalIgnoreCase)
-            || reference.Contains(".txt", StringComparison.OrdinalIgnoreCase)
+        var looksLikeSegment = reference.Contains("seg", StringComparison.OrdinalIgnoreCase)
+            || reference.Contains(".jpg", StringComparison.OrdinalIgnoreCase)
+            || reference.Contains(".ts", StringComparison.OrdinalIgnoreCase);
+        var route = (reference.Contains(".m3u8", StringComparison.OrdinalIgnoreCase)
+            || reference.Contains(".txt", StringComparison.OrdinalIgnoreCase))
+            && !looksLikeSegment
                 ? "Proxy/playlist.m3u8"
                 : "Proxy/segment.ts";
         var extension = route.EndsWith("m3u8", StringComparison.Ordinal) ? ".m3u8" : ".ts";
-        return $"/Animex/{route}?url={Uri.EscapeDataString(absolute.ToString())}&ext={extension}";
+        var refererParameter = string.IsNullOrWhiteSpace(referer)
+            ? string.Empty
+            : $"&referer={Uri.EscapeDataString(referer)}";
+        return $"/Animex/{route}?url={Uri.EscapeDataString(absolute.ToString())}&ext={extension}{refererParameter}";
     }
 
     private static bool IsAllowedHost(Uri target)
@@ -217,7 +231,7 @@ public class PlaybackController : ControllerBase
         {
             ".bcdn2.se", ".anicdn.se", ".acscdn.com", ".vidcloud.se", ".animex.one",
             ".megaplay.buzz", ".serveproxy.com", ".akamaihd.net", ".aniwatchtv.site", ".animeapps.top",
-            ".nexabloom.top", ".dramahot.top", ".24stream.xyz"
+            ".nexabloom.top", ".dramahot.top", ".24stream.xyz", ".hiddenvertex.space"
         };
 
         if (target.Scheme != Uri.UriSchemeHttps)
@@ -244,11 +258,17 @@ public class PlaybackController : ControllerBase
         }
     }
 
-    private async Task<string?> FetchTextAsync(string url, CancellationToken cancellationToken)
+    private async Task<string?> FetchTextAsync(string url, Dictionary<string, string> headers, CancellationToken cancellationToken)
     {
         try
         {
-            using var response = await HttpClients.Shared.GetAsync(url, cancellationToken).ConfigureAwait(false);
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            foreach (var header in headers)
+            {
+                request.Headers.TryAddWithoutValidation(header.Key, header.Value);
+            }
+
+            using var response = await HttpClients.Shared.SendAsync(request, cancellationToken).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
                 return null;

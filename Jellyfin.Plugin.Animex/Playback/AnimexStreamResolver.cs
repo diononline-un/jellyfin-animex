@@ -106,12 +106,51 @@ public class AnimexStreamResolver : IStreamResolver
                 ? StreamKind.Hls
                 : StreamKind.File;
 
+            var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            if (document.RootElement.TryGetProperty("headers", out var headerElement)
+                && headerElement.ValueKind == System.Text.Json.JsonValueKind.Object)
+            {
+                foreach (var header in headerElement.EnumerateObject())
+                {
+                    if (header.Value.ValueKind == System.Text.Json.JsonValueKind.String)
+                    {
+                        headers[header.Name] = header.Value.GetString() ?? string.Empty;
+                    }
+                }
+            }
+
+            // Quelle vorab prüfen: Ein toter CDN-Link darf nicht als Redirect an Jellyfin gehen,
+            // sonst versucht ffmpeg zu transkodieren und scheitert mit einem unklaren Fehler.
+            if (kind == StreamKind.Hls)
+            {
+                using var check = new HttpRequestMessage(HttpMethod.Get, streamUrl);
+                foreach (var header in headers)
+                {
+                    check.Headers.TryAddWithoutValidation(header.Key, header.Value);
+                }
+
+                using var checkResponse = await _http.SendAsync(check, cancellationToken).ConfigureAwait(false);
+                if (!checkResponse.IsSuccessStatusCode)
+                {
+                    _logger.LogDebug("Quelle von {Provider} antwortet mit HTTP {Status}", provider, (int)checkResponse.StatusCode);
+                    return null;
+                }
+
+                var probe = await checkResponse.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+                if (!probe.TrimStart().StartsWith("#EXTM3U", StringComparison.Ordinal))
+                {
+                    _logger.LogDebug("Quelle von {Provider} ist keine HLS-Playlist", provider);
+                    return null;
+                }
+            }
+
             var result = new ResolvedStream
             {
                 Kind = kind,
                 Url = streamUrl,
                 PlayerUrl = playerUrl,
-                Note = $"Über Anbieter {provider} ermittelt."
+                Note = $"Über Anbieter {provider} ermittelt.",
+                Headers = headers
             };
 
             if (document.RootElement.TryGetProperty("tracks", out var tracks)

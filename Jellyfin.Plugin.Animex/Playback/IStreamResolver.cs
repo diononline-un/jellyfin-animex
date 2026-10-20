@@ -30,6 +30,9 @@ public class ResolvedStream
     /// <summary>Untertitelspuren, soweit bekannt.</summary>
     public List<string> SubtitleTracks { get; set; } = new();
 
+    /// <summary>Zusätzliche HTTP-Kopfzeilen, die die Quelle verlangt.</summary>
+    public Dictionary<string, string> Headers { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
     /// <summary>Meldung, falls nur teilweise aufgelöst wurde.</summary>
     public string? Note { get; set; }
 
