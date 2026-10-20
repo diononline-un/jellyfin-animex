@@ -9,7 +9,7 @@
 set -euo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 mode="${1:-build}"
-sdk="mcr.microsoft.com/dotnet/sdk:9.0"
+sdk="mcr.microsoft.com/dotnet/sdk:10.0"
 node="node:24-alpine"
 uid_gid="$(id -u):$(id -g)"
 version="$(grep -oP '(?<=<Version>)[^<]+' "$here/Jellyfin.Plugin.Animex/Jellyfin.Plugin.Animex.csproj" | head -1)"
