@@ -53,7 +53,7 @@ Das Plugin verbindet beides:
 
 ## Betrieb
 
-- Zielsystem: Jellyfin 10.11.5, Plugin-Ziel `TargetAbi` 10.11.0.0, `net9.0`.
+- Zielsystem: Jellyfin 12.2.0, Plugin-Ziel `TargetAbi` 12.2.0.0, `net10.0`.
 - Bauen mit `./build.sh`, Ergebnis `dist/Jellyfin.Plugin.Animex_0.1.0.zip`.
 - Installation über Jellyfin, Plugins, „Aus Datei installieren“.
 - Eigener Bibliotheksordner, getrennt von bestehenden Bibliotheken.
@@ -148,7 +148,7 @@ Aufbau:
 
 ## Status
 
-Prototyp. Auf einem privaten NAS installiert und mit Jellyfin 10.11.5
+Prototyp. Auf einem privaten NAS installiert und mit Jellyfin 12.2.0
 getestet. Wiedergabe, Proxy und Bibliothek funktionieren, solange die
 Quellen-Schnittstelle erreichbar ist. Der vollständige Katalog ist deutlich
 größer als ursprünglich dokumentiert. Ein Teilbestand ist nutzbar, der

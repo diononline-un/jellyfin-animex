@@ -1,6 +1,6 @@
 # Installation auf dem NAS
 
-Diese Anleitung führt von null bis zur laufenden Bibliothek. Zielsystem ist Jellyfin 10.11.5 auf dem NAS.
+Diese Anleitung führt von null bis zur laufenden Bibliothek. Zielsystem ist Jellyfin 12.2.0 auf dem NAS.
 
 ## 0. Was am Ende entsteht
 
